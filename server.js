@@ -24,7 +24,6 @@ var wsServer = new WebSocketServer({
 });
  
 function originIsAllowed(origin) {
-  console.log('Allowed origin: ' + config.allowed_origin); //debug
   if (origin == config.allowed_origin) {
     return true;
   }
@@ -56,19 +55,16 @@ wsServer.on('request', function(request) {
           if (err) {
             console.log('Resolution for ' + domain + ' failed: ' + err.message);
             if (err.message.match("EBADNAME")) {
-              console.log("Invalid domain name: " + domainname + " reduced to " + domain); //debug
               connection.sendUTF(domainname + ":INVALID");
               return;
             }
             
             if (err.message.match("ENOTFOUND") || err.message.match("ENODATA")) {
-              console.log("No record was found. Making whois query."); //debug
               whois.lookup(domain, function(err, whoisdata) {
                 if (err) {
                   console.log("Error during whois query: " + err);
                   return;
                 }
-                console.log("Whois result:\n" + whoisdata); //debug
                 if (whoisdata.match("Domain not found")) {
                   connection.sendUTF(domainname + ":AVAILABLE");
                 }
@@ -83,7 +79,6 @@ wsServer.on('request', function(request) {
             return;
           }
           else {
-            console.log('Domain is not available. Response: ' + addresses); //debug
             connection.sendUTF(domainname + ":UNAVAILABLE");
             return;
           }

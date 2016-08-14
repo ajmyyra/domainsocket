@@ -18,8 +18,6 @@ module.exports = {
 }
 ```
 
-You might also want to remove all files containing 'debug'. They're useful for debugging, not so much for production.
-
 3) Run server.js under your favorite daemon (m2, forever, plain /usr/bin/node, whatever works for you best)
 
 4) Create a websocket from your website using W3C sockets ( ws = new WebSocket('wss://your-websocket-server-address:8080/', 'echo-protocol'); ) and start using the service. More info at http://codular.com/node-web-sockets .

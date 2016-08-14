@@ -1,0 +1,21 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Other
+pids
+*.pid
+*.seed
+*.pid.lock
+*.m2
+.m2
+.env
+
+config.js
+client
+client/*
+
+build/Release
+node_modules
+.npm
