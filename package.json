@@ -1,0 +1,12 @@
+{
+  "name": "domainsocket",
+  "version": "1.0.0",
+  "description": "A simple node.js websocket server to make lookups for available domain names.",
+  "main": "server.js",
+  "repository": "https://github.com/ajmyyra/domainsocket/",
+  "author": "Antti Myyrä <antti.myyra@gmail.com>",
+  "dependencies": {
+    "websocket": "~1.0.23",
+    "whois": "~2.3.1"
+  }
+}
