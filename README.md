@@ -4,8 +4,6 @@ Simple websocket server to make domain lookups. Punycode domains (domains with Ã
 
 Lookup is first done using C-Ares, and only if no result is found (domain might be available), a more expensive whois request is made to find out the truth.
 
-TODO: Secure it, http://www.giacomovacca.com/2015/02/websockets-over-nodejs-from-plain-to.html
-
 ## Running the server
 
 1) Clone the repository to your server and run 'npm install' in the directory.
