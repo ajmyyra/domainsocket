@@ -1,3 +1,4 @@
+var fs = require('fs');
 var http = require('http');
 var dns = require('dns');
 var whois = require('whois');
@@ -7,16 +8,30 @@ const punycode = require('punycode');
 var domaincheck = new RegExp("[^a-z0-9-.]","i");
 var config = require('./config');
 
-var server = http.createServer(function(request, response) {
-    console.log((new Date()) + ' Received request for ' + request.url);
-    response.writeHead(404);
-    response.end();
-});
+var httpService = (config.ssl) ? require('https') : require('http');
+var server = null;
 
-server.listen(process.env.PORT || 8080, process.env.IP || "0.0.0.0", function(){
-  var addr = server.address();
-  console.log("Websocket server listening at", addr.address + ":" + addr.port);
-});
+var processRequest = function(request, response) {
+  response.writeHead(404);
+  response.end();
+};
+
+if (config.ssl) {
+  server = httpService.createServer({
+    key: fs.readFileSync(config.ssl_key),
+    cert: fs.readFileSync(config.ssl_cert)
+  }, processRequest).listen(process.env.PORT || 8080, process.env.IP || "0.0.0.0", function(){
+    var addr = server.address();
+    console.log("Secure websocket server (wss) listening at", addr.address + ":" + addr.port);
+  });
+}
+else {
+  server = httpService.createServer(processRequest).listen(process.env.PORT || 8080, process.env.IP || "0.0.0.0", function(){
+    var addr = server.address();
+    console.log("Websocket server (ws) listening at", addr.address + ":" + addr.port);
+  });
+  
+}
 
 var wsServer = new WebSocketServer({
     httpServer: server,
@@ -52,7 +67,6 @@ wsServer.on('request', function(request) {
      
         dns.resolve(domain, function(err, addresses) {
           if (err) {
-            console.log('Resolution for ' + domain + ' failed: ' + err.message);
             if (err.message.match("EBADNAME")) {
               connection.sendUTF(domainname + ":INVALID");
               return;
@@ -65,8 +79,8 @@ wsServer.on('request', function(request) {
                   return;
                 }
                 if (whoisdata.match("WHOIS LIMIT EXCEEDED")) {
-                  console.log("Whois limit exceeded for " + domain);
-                  connection.sendUTF(domainname + ":LIMITEXCEEDED")
+                  console.log("Whois request failed for " + domain + "\nResponse:\n" + whoisdata);
+                  connection.sendUTF(domainname + ":SERVFAIL")
                   return;
                 }
                 
