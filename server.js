@@ -43,8 +43,7 @@ wsServer.on('request', function(request) {
     console.log((new Date()) + ' Connection accepted.');
     connection.on('message', function(domainname) {
         var domainname = domainname.utf8Data;
-        console.log('Received domainname: ' + domainname);
-        
+         
         var domain = punycode.toASCII(String(domainname || ''));
         if (!domain || domaincheck.test(domain) || domain.length < 3) {
           connection.sendUTF(domainname + ":INVALID");
@@ -65,18 +64,27 @@ wsServer.on('request', function(request) {
                   console.log("Error during whois query: " + err);
                   return;
                 }
-                if (whoisdata.match("Domain not found")) {
+                if (whoisdata.match("WHOIS LIMIT EXCEEDED")) {
+                  console.log("Whois limit exceeded for " + domain);
+                  connection.sendUTF(domainname + ":LIMITEXCEEDED")
+                  return;
+                }
+                
+                if (whoisdata.match("Domain not found") || whoisdata.match("No match for domain") || whoisdata.match("NOT FOUND")) {
                   connection.sendUTF(domainname + ":AVAILABLE");
+                  return;
                 }
                 else {
                   connection.sendUTF(domainname + ":UNAVAILABLE");
+                  return;
                 }
-                return;
               });
             }
+            else {
+              console.log("Unspecified DNS error was encountered: " + err);
+              return;
+            }
             
-            console.log("Unspecified error was encountered: " + err);
-            return;
           }
           else {
             connection.sendUTF(domainname + ":UNAVAILABLE");
