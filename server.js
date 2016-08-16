@@ -68,7 +68,7 @@ wsServer.on('request', function(request) {
         dns.resolveNs(domain, function(err, addresses) {
           if (err) {
             if (err.message.match("EBADNAME")) {
-              console.log("Domain " + domainname + " is invalid by DNS query.");
+              console.log((new Date()) +" Domain " + domainname + " is invalid by DNS query.");
               connection.sendUTF(domainname + ":INVALID");
               return;
             }
@@ -79,36 +79,36 @@ wsServer.on('request', function(request) {
                 "timeout": config.timeout
               }, function(err, whoisdata) {
                 if (err) {
-                  console.log("Error during whois query: " + err);
+                  console.log((new Date()) + " Error during whois query: " + err);
                   connection.sendUTF(domainname + ":SERVFAIL");
                   return;
                 }
                 if (whoisdata.match("WHOIS LIMIT EXCEEDED")) {
-                  console.log("Whois request failed for " + domain + "\nResponse:\n" + whoisdata);
+                  console.log((new Date()) + " Whois request failed for " + domain + "\nResponse:\n" + whoisdata);
                   connection.sendUTF(domainname + ":SERVFAIL")
                   return;
                 }
                 
                 if (whoisdata.match("Domain not found") || whoisdata.match("No match for domain") || whoisdata.match("NOT FOUND")) {
-                  console.log("Domain available based on whois request.");
+                  console.log((new Date()) + " Domain available based on whois request.");
                   connection.sendUTF(domainname + ":AVAILABLE");
                   return;
                 }
                 else {
-                  console.log("Domain " + domainname + " unavailable (has whois record)");
+                  console.log((new Date()) + " Domain " + domainname + " unavailable (has whois record)");
                   connection.sendUTF(domainname + ":UNAVAILABLE");
                   return;
                 }
               });
             }
             else {
-              console.log("Unspecified DNS error was encountered: " + err);
+              console.log((new Date()) + "Unspecified DNS error was encountered for" + domainname+ ": " + err);
               return;
             }
             
           }
           else {
-            console.log("Domain " + domainname + " unavailable (has DNS servers)");
+            console.log((new Date()) + " Domain " + domainname + " unavailable (has DNS servers)");
             connection.sendUTF(domainname + ":UNAVAILABLE");
             return;
           }
