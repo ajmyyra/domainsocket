@@ -57,7 +57,7 @@ wsServer.on('request', function(request) {
     var connection = request.accept('echo-protocol', request.origin);
     console.log((new Date()) + ' Connection accepted.');
     connection.on('message', function(domainname) {
-        var domainname = domainname.utf8Data;
+        domainname = domainname.utf8Data;
          
         var domain = punycode.toASCII(String(domainname || ''));
         if (!domain || domaincheck.test(domain) || domain.length < 3) {
@@ -65,17 +65,22 @@ wsServer.on('request', function(request) {
           return;
         }
      
-        dns.resolve(domain, function(err, addresses) {
+        dns.resolveNs(domain, function(err, addresses) {
           if (err) {
             if (err.message.match("EBADNAME")) {
+              console.log("Domain " + domainname + " is invalid by DNS query.");
               connection.sendUTF(domainname + ":INVALID");
               return;
             }
             
             if (err.message.match("ENOTFOUND") || err.message.match("ENODATA")) {
-              whois.lookup(domain, function(err, whoisdata) {
+              whois.lookup(domain, {
+                "follow":  0,
+                "timeout": config.timeout
+              }, function(err, whoisdata) {
                 if (err) {
                   console.log("Error during whois query: " + err);
+                  connection.sendUTF(domainname + ":SERVFAIL");
                   return;
                 }
                 if (whoisdata.match("WHOIS LIMIT EXCEEDED")) {
@@ -85,10 +90,12 @@ wsServer.on('request', function(request) {
                 }
                 
                 if (whoisdata.match("Domain not found") || whoisdata.match("No match for domain") || whoisdata.match("NOT FOUND")) {
+                  console.log("Domain available based on whois request.");
                   connection.sendUTF(domainname + ":AVAILABLE");
                   return;
                 }
                 else {
+                  console.log("Domain " + domainname + " unavailable (has whois record)");
                   connection.sendUTF(domainname + ":UNAVAILABLE");
                   return;
                 }
@@ -101,6 +108,7 @@ wsServer.on('request', function(request) {
             
           }
           else {
+            console.log("Domain " + domainname + " unavailable (has DNS servers)");
             connection.sendUTF(domainname + ":UNAVAILABLE");
             return;
           }

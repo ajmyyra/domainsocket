@@ -8,12 +8,13 @@ Lookup is first done using C-Ares, and only if no result is found (domain might 
 
 1) Clone the repository to your server and run 'npm install' in the directory.
 
-2) Create a config.js file that has allowed origin and if needed, SSL support enabled.
+2) Create a config.js file that has allowed origin, allowed response time and if needed, SSL support enabled.
 
 With SSL:
 ```
 module.exports = {
     'allowed_origin': 'https://your-web-page.com',
+    'timeout': 5,
     'ssl': true,
     'ssl_key': '/path/to/your/ssl.key',
     'ssl_cert': '/path/to/your/ssl.crt'
