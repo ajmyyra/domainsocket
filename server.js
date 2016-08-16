@@ -79,7 +79,7 @@ wsServer.on('request', function(request) {
                 "timeout": config.timeout
               }, function(err, whoisdata) {
                 if (err) {
-                  console.log((new Date()) + " Error during whois query: " + err);
+                  console.log((new Date()) + " Error during whois query for domain " + domainname +": " + err);
                   connection.sendUTF(domainname + ":SERVFAIL");
                   return;
                 }
@@ -90,7 +90,7 @@ wsServer.on('request', function(request) {
                 }
                 
                 if (whoisdata.match("Domain not found") || whoisdata.match("No match for domain") || whoisdata.match("NOT FOUND")) {
-                  console.log((new Date()) + " Domain available based on whois request.");
+                  console.log((new Date()) + " Domain " + domainname + " available based on whois request.");
                   connection.sendUTF(domainname + ":AVAILABLE");
                   return;
                 }
