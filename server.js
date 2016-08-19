@@ -116,7 +116,7 @@ wsServer.on('request', function(request) {
             if (err.message.match("SERVFAIL")) {
               console.log((new Date()) + " Domain " + domainname + " is unavailable per DNS query (but isn't working).");
               if (config.memcached) {
-                memcached.set(domain, 'AVAILABLE', function (err) {
+                memcached.set(domain, 'UNAVAILABLE', 3600, function (err) {
                   console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
                 });
               }
@@ -143,7 +143,7 @@ wsServer.on('request', function(request) {
                 if (whoisdata.match("Domain not found") || whoisdata.match("No match for domain") || whoisdata.match("NOT FOUND") || whoisdata.match("Status: AVAILABLE")) {
                   console.log((new Date()) + " Domain " + domainname + " available per whois request.");
                   if (config.memcached) {
-                    memcached.set(domain, 'AVAILABLE', function (err) {
+                    memcached.set(domain, 'AVAILABLE', 3600, function (err) {
                       console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
                     });
                   }
@@ -153,7 +153,7 @@ wsServer.on('request', function(request) {
                 else {
                   console.log((new Date()) + " Domain " + domainname + " unavailable per whois request.");
                   if (config.memcached) {
-                    memcached.set(domain, 'UNAVAILABLE', function (err) {
+                    memcached.set(domain, 'UNAVAILABLE', 3600, function (err) {
                       console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
                     });
                   }
@@ -172,7 +172,7 @@ wsServer.on('request', function(request) {
           else {
             console.log((new Date()) + " Domain " + domainname + " unavailable per DNS request.");
             if (config.memcached) {
-              memcached.set(domain, 'UNAVAILABLE', function (err) {
+              memcached.set(domain, 'UNAVAILABLE', 3600, function (err) {
                 console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
               });
             }
