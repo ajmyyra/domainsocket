@@ -10,6 +10,16 @@ var config = require('./config');
 
 var httpService = (config.ssl) ? require('https') : require('http');
 var server = null;
+var memcached = null;
+if (config.memcached) {
+  var Memcached = require('memcached');
+  memcached = new Memcached(config.memcached_server, {
+    retries: 10,
+    retry: 1000,
+    reconnect: 10000,
+    idle: 5000
+  });
+}
 
 var processRequest = function(request, response) {
   response.writeHead(404);
@@ -64,6 +74,17 @@ wsServer.on('request', function(request) {
           connection.sendUTF(domainname + ":INVALID");
           return;
         }
+        
+        if (config.memcached) {
+          memcached.get(domain, function (err, data) {
+            if (err) {
+              console.log("Error in memcache query: " + err);
+              return;
+            }
+            
+            console.log("Memcache response: " + data);
+          });
+        }
      
         dns.resolveNs(domain, function(err, addresses) {
           if (err) {
@@ -93,7 +114,7 @@ wsServer.on('request', function(request) {
                   return;
                 }
                 
-                if (whoisdata.match("Domain not found") || whoisdata.match("No match for domain") || whoisdata.match("NOT FOUND")) {
+                if (whoisdata.match("Domain not found") || whoisdata.match("No match for domain") || whoisdata.match("NOT FOUND") || whoisdata.match("Status: AVAILABLE")) {
                   console.log((new Date()) + " Domain " + domainname + " available based on whois request.");
                   connection.sendUTF(domainname + ":AVAILABLE");
                   return;
@@ -106,7 +127,7 @@ wsServer.on('request', function(request) {
               });
             }
             else {
-              console.log((new Date()) + "Unspecified DNS error was encountered for" + domainname+ ": " + err);
+              console.log((new Date()) + "Unspecified DNS error was encountered for " + domainname+ ": " + err);
               return;
             }
             

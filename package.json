@@ -7,6 +7,7 @@
   "author": "Antti Myyrä <antti.myyra@gmail.com>",
   "dependencies": {
     "websocket": "~1.0.23",
-    "whois": "~2.3.1"
+    "whois": "~2.3.1",
+    "memcached": "~2.2.2"
   }
 }
