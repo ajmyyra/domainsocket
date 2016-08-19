@@ -72,6 +72,10 @@ wsServer.on('request', function(request) {
               connection.sendUTF(domainname + ":INVALID");
               return;
             }
+            if (err.message.match("SERVFAIL")) {
+              console.log((new Date()) + " Domain " + domainname + " exists, but doesn't have working DNS servers.");
+              connection.sendUTF(domainname + ":UNAVAILABLE");
+            }
             
             if (err.message.match("ENOTFOUND") || err.message.match("ENODATA")) {
               whois.lookup(domain, {
