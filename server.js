@@ -126,8 +126,7 @@ wsServer.on('request', function(request) {
             
             if (err.message.match("ENOTFOUND") || err.message.match("ENODATA")) {
               whois.lookup(domain, {
-                "follow":  0,
-                "timeout": config.timeout
+                "follow":  0
               }, function(err, whoisdata) {
                 if (err) {
                   console.log((new Date()) + " Error during whois query for domain " + domainname +": " + err);

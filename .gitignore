@@ -19,3 +19,5 @@ client/*
 build/Release
 node_modules
 .npm
+.idea
+.idea/*
