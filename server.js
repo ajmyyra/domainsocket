@@ -40,16 +40,34 @@ else {
     var addr = server.address();
     console.log("Websocket server (ws) listening at", addr.address + ":" + addr.port);
   });
-  
 }
 
 var wsServer = new WebSocketServer({
-    httpServer: server,
-    autoAcceptConnections: false
+  httpServer: server,
+  autoAcceptConnections: false
 });
- 
+
 function originIsAllowed(origin) {
   if (origin == config.allowed_origin) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+function whoisNotfound(whoisresult) {
+  whoisresult = whoisresult.toLowerCase();
+  if (whoisresult.match("domain not found") ||
+      whoisresult.match("no match for") ||
+      whoisresult.match("not found") ||
+      whoisresult.match("status: available") ||
+      whoisresult.match("no domain exists") ||
+      whoisresult.match("no data found") ||
+      whoisresult.match("domain status: no object found") ||
+      whoisresult.match("object does not exist") ||
+      whoisresult.match("domain status: free") ||
+      whoisresult.match("domain name has not been registered")) {
     return true;
   }
   else {
@@ -67,109 +85,54 @@ wsServer.on('request', function(request) {
     var connection = request.accept('echo-protocol', request.origin);
     console.log((new Date()) + ' Connection accepted.');
     connection.on('message', function(domainname) {
-        domainname = domainname.utf8Data;
+      domainname = domainname.utf8Data;
          
-        var domain = punycode.toASCII(String(domainname || ''));
-        if (!domain || domaincheck.test(domain) || domain.length < 3) {
-          connection.sendUTF(domainname + ":INVALID");
-          return;
-        }
+      var domain = punycode.toASCII(String(domainname || ''));
+      if (!domain || domaincheck.test(domain) || domain.length < 3) {
+        connection.sendUTF(domainname + ":INVALID");
+        return;
+      }
         
-        if (config.memcached) {
-          memcached.get(domain, function (err, data) {
-            if (err) {
-              console.log("Error in memcache query: " + err);
-              return;
-            }
-            else {
-              if (data == 'UNAVAILABLE') {
-                console.log((new Date()) + " Domain " + domainname + " unavailable per cache request.");
-                connection.sendUTF(domainname + ":UNAVAILABLE");
-                return;
-              }
-              else if (data == 'AVAILABLE') {
-                console.log((new Date()) + " Domain " + domainname + " available per cache request.");
-                connection.sendUTF(domainname + ":AVAILABLE");
-                return;
-              }
-              else {
-                if (data == 'undefined') {
-                  console.log((new Date()) + " Cache miss for " + domainname);
-                }
-                else {
-                  console.log((new Date()) + " Strange cache entry for " + domainname + ": " + data);
-                }
-              }
-            }
-           
-            
-          });
-        }
-     
-        dns.resolveNs(domain, function(err, addresses) {
+      if (config.memcached) {
+        memcached.get(domain, function (err, data) {
           if (err) {
-            if (err.message.match("EBADNAME")) {
-              console.log((new Date()) +" Domain " + domainname + " is invalid per DNS query.");
-              connection.sendUTF(domainname + ":INVALID");
-              return;
-            }
-            if (err.message.match("SERVFAIL")) {
-              console.log((new Date()) + " Domain " + domainname + " is unavailable per DNS query (but isn't working).");
-              if (config.memcached) {
-                memcached.set(domain, 'UNAVAILABLE', 3600, function (err) {
-                  console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
-                });
-              }
+            console.log("Error in memcache query: " + err);
+            return;
+          }
+          else {
+            if (data == 'UNAVAILABLE') {
+              console.log((new Date()) + " Domain " + domainname + " unavailable per cache request.");
               connection.sendUTF(domainname + ":UNAVAILABLE");
               return;
             }
-            
-            if (err.message.match("ENOTFOUND") || err.message.match("ENODATA")) {
-              whois.lookup(domain, {
-                "follow":  0
-              }, function(err, whoisdata) {
-                if (err) {
-                  console.log((new Date()) + " Error during whois query for domain " + domainname +": " + err);
-                  connection.sendUTF(domainname + ":SERVFAIL");
-                  return;
-                }
-                if (whoisdata.match("WHOIS LIMIT EXCEEDED")) {
-                  console.log((new Date()) + " Whois request failed for " + domain + "\nResponse:\n" + whoisdata);
-                  connection.sendUTF(domainname + ":SERVFAIL");
-                  return;
-                }
-                
-                if (whoisdata.match("Domain not found") || whoisdata.match("No match for domain") || whoisdata.match("NOT FOUND") || whoisdata.match("Status: AVAILABLE")) {
-                  console.log((new Date()) + " Domain " + domainname + " available per whois request.");
-                  if (config.memcached) {
-                    memcached.set(domain, 'AVAILABLE', 3600, function (err) {
-                      console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
-                    });
-                  }
-                  connection.sendUTF(domainname + ":AVAILABLE");
-                  return;
-                }
-                else {
-                  console.log((new Date()) + " Domain " + domainname + " unavailable per whois request.");
-                  if (config.memcached) {
-                    memcached.set(domain, 'UNAVAILABLE', 3600, function (err) {
-                      console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
-                    });
-                  }
-                  connection.sendUTF(domainname + ":UNAVAILABLE");
-                  return;
-                }
-              });
-            }
-            else {
-              console.log((new Date()) + "Unspecified DNS error was encountered for " + domainname+ ": " + err);
-              connection.sendUTF(domainname + ":SERVFAIL");
+            else if (data == 'AVAILABLE') {
+              console.log((new Date()) + " Domain " + domainname + " available per cache request.");
+              connection.sendUTF(domainname + ":AVAILABLE");
               return;
             }
-            
+            else {
+              if (data == 'undefined') {
+                console.log((new Date()) + " Cache miss for " + domainname);
+              }
+              else {
+                console.log((new Date()) + " Strange cache entry for " + domainname + ": " + data);
+              }
+            }
           }
-          else {
-            console.log((new Date()) + " Domain " + domainname + " unavailable per DNS request.");
+           
+            
+        });
+      }
+     
+      dns.resolveNs(domain, function(err, addresses) {
+        if (err) {
+          if (err.message.match("EBADNAME")) {
+            console.log((new Date()) +" Domain " + domainname + " is invalid per DNS query.");
+            connection.sendUTF(domainname + ":INVALID");
+            return;
+          }
+          if (err.message.match("SERVFAIL")) {
+            console.log((new Date()) + " Domain " + domainname + " is unavailable per DNS query (but isn't working).");
             if (config.memcached) {
               memcached.set(domain, 'UNAVAILABLE', 3600, function (err) {
                 console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
@@ -178,7 +141,62 @@ wsServer.on('request', function(request) {
             connection.sendUTF(domainname + ":UNAVAILABLE");
             return;
           }
-        });
+
+          if (err.message.match("ENOTFOUND") || err.message.match("ENODATA")) {
+            whois.lookup(domain, {
+              "follow":  0
+            }, function(err, whoisdata) {
+              if (err) {
+                console.log((new Date()) + " Error during whois query for domain " + domainname +": " + err);
+                connection.sendUTF(domainname + ":SERVFAIL");
+                return;
+              }
+              if (whoisdata.match("WHOIS LIMIT EXCEEDED") || whoisdata.match("request is being rate limited") || whoisdata.match("quota exceeded")) {
+                console.log((new Date()) + " Whois request failed for " + domain + "\nResponse:\n" + whoisdata);
+                connection.sendUTF(domainname + ":SERVFAIL");
+                return;
+              }
+
+              if (whoisNotfound(whoisdata)) {
+                console.log((new Date()) + " Domain " + domainname + " available per whois request.");
+                if (config.memcached) {
+                  memcached.set(domain, 'AVAILABLE', 3600, function (err) {
+                    console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
+                  });
+                }
+                connection.sendUTF(domainname + ":AVAILABLE");
+                return;
+              }
+              else {
+                console.log((new Date()) + " Domain " + domainname + " unavailable per whois request.");
+                if (config.memcached) {
+                  memcached.set(domain, 'UNAVAILABLE', 3600, function (err) {
+                    console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
+                  });
+                }
+                connection.sendUTF(domainname + ":UNAVAILABLE");
+                return;
+              }
+            });
+          }
+          else {
+            console.log((new Date()) + "Unspecified DNS error was encountered for " + domainname+ ": " + err);
+            connection.sendUTF(domainname + ":SERVFAIL");
+            return;
+          }
+            
+        }
+        else {
+          console.log((new Date()) + " Domain " + domainname + " unavailable per DNS request.");
+          if (config.memcached) {
+            memcached.set(domain, 'UNAVAILABLE', 3600, function (err) {
+              console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);
+            });
+          }
+          connection.sendUTF(domainname + ":UNAVAILABLE");
+          return;
+        }
+      });
     });
     connection.on('close', function(reasonCode, description) {
         console.log((new Date()) + ' Client ' + connection.remoteAddress + ' disconnected.');
