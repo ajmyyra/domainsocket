@@ -48,16 +48,21 @@ var wsServer = new WebSocketServer({
 });
 
 function originIsAllowed(origin) {
-  if (origin == config.allowed_origin) {
+  if (config.debug) {
     return true;
   }
   else {
-    return false;
+    if (origin == config.allowed_origin) {
+      return true;
+    }
+    else {
+      return false;
+    }
   }
+
 }
 
 function whoisNotfound(whoisresult) {
-  whoisresult = whoisresult.toLowerCase();
   if (whoisresult.match("domain not found") ||
       whoisresult.match("no match for") ||
       whoisresult.match("not found") ||
@@ -151,6 +156,8 @@ wsServer.on('request', function(request) {
                 connection.sendUTF(domainname + ":SERVFAIL");
                 return;
               }
+              whoisdata = whoisdata.toLowerCase();
+
               if (whoisdata.match("WHOIS LIMIT EXCEEDED") || whoisdata.match("request is being rate limited") || whoisdata.match("quota exceeded")) {
                 console.log((new Date()) + " Whois request failed for " + domain + "\nResponse:\n" + whoisdata);
                 connection.sendUTF(domainname + ":SERVFAIL");
@@ -169,6 +176,9 @@ wsServer.on('request', function(request) {
               }
               else {
                 console.log((new Date()) + " Domain " + domainname + " unavailable per whois request.");
+                if (config.debug) {
+                  console.log(whoisdata);
+                }
                 if (config.memcached) {
                   memcached.set(domain, 'UNAVAILABLE', 3600, function (err) {
                     console.log((new Date()) + " Problem setting cache entry for " + domain + ", error: " + err);

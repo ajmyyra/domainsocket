@@ -9,11 +9,13 @@ Lookup is first done using C-Ares, and only if no result is found (domain might 
 1) Clone the repository to your server and run 'npm install' in the directory.
 
 2) Create a config.js file that has allowed origin, memcached and SSL information.
+Debug = true allows any origin and logs all non-matching whois responses.
 
 With SSL:
 ```
 module.exports = {
-    'allowed_origin': 'https://your-web-page.com'
+    'debug': false,
+    'allowed_origin': 'https://your-web-page.com',
     'memcached': true,
     'memcached_server': '127.0.0.1:11211',
     'ssl': true,
