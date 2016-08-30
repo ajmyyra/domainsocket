@@ -91,6 +91,10 @@ wsServer.on('request', function(request) {
     console.log((new Date()) + ' Connection accepted.');
     connection.on('message', function(domainname) {
       domainname = domainname.utf8Data;
+
+      if (config.debug) {
+        console.log("Whois request received for " + domainname);
+      }
          
       var domain = punycode.toASCII(String(domainname || ''));
       if (!domain || domaincheck.test(domain) || domain.length < 3) {
