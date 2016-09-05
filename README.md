@@ -15,7 +15,7 @@ With SSL:
 ```
 module.exports = {
     'debug': false,
-    'allowed_origin': 'https://your-web-page.com',
+    'allowed_origin': [ 'https://your-web-page.com', 'https://sub.your-web-page.com' ],
     'memcached': true,
     'memcached_server': '127.0.0.1:11211',
     'ssl': true,

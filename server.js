@@ -52,12 +52,13 @@ function originIsAllowed(origin) {
     return true;
   }
   else {
-    if (origin == config.allowed_origin) {
-      return true;
+    for (var orig in config.allowed_origin) {
+        if (origin == orig) {
+            return true;
+        }
     }
-    else {
-      return false;
-    }
+
+    return false;
   }
 
 }
