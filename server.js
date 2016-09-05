@@ -48,19 +48,16 @@ var wsServer = new WebSocketServer({
 });
 
 function originIsAllowed(origin) {
-  if (config.debug) {
-    return true;
-  }
-  else {
-    for (var orig in config.allowed_origin) {
+  for (var orig in config.allowed_origin) {
+        if (config.debug) {
+            console.log("Checking " + origin + " against " + orig);
+        }
         if (origin == orig) {
             return true;
         }
-    }
-
-    return false;
   }
 
+  return false;
 }
 
 function whoisNotfound(whoisresult) {
