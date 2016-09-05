@@ -50,9 +50,9 @@ var wsServer = new WebSocketServer({
 function originIsAllowed(origin) {
   for (var orig in config.allowed_origin) {
         if (config.debug) {
-            console.log("Checking " + origin + " against " + orig);
+            console.log("Checking " + origin + " against " + config.allowed_origin[orig]);
         }
-        if (origin == orig) {
+        if (origin == config.allowed_origin[orig]) {
             return true;
         }
   }
