@@ -11,7 +11,7 @@ Lookup is first done using C-Ares, and only if no result is found (domain might 
 2) Create a config.js file that has allowed origin, memcached and SSL information.
 Debug = true allows any origin and logs all non-matching whois responses.
 
-With SSL:
+With SSL and memcached:
 ```
 module.exports = {
     'debug': false,
@@ -24,10 +24,11 @@ module.exports = {
 }
 ```
 
-Without SSL:
+Without SSL and memcached:
 ```
 module.exports = {
     'allowed_origin': 'https://your-web-page.com',
+    'memcached': false,
     'ssl': false
 }
 ```
