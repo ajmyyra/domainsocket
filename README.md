@@ -8,10 +8,9 @@ Lookup is first done using C-Ares, and only if no result is found (domain might 
 
 1) Clone the repository to your server and run 'npm install' in the directory.
 
-2) Create a config.js file that has allowed origin, memcached and SSL information.
-Debug = true allows any origin and logs all non-matching whois responses.
+2) Create a config.js file that has allowed origin, memcached and SSL information. Debug mode is a lot more verbose, causing too much logging in production.
 
-With SSL and memcached:
+With SSL and memcached, but without debug (standard production config):
 ```
 module.exports = {
     'debug': false,
@@ -24,12 +23,13 @@ module.exports = {
 }
 ```
 
-Without SSL and memcached:
+Without SSL and memcached, but with debug on:
 ```
 module.exports = {
     'allowed_origin': 'https://your-web-page.com',
     'memcached': false,
-    'ssl': false
+    'ssl': false,
+    'debug': true
 }
 ```
 

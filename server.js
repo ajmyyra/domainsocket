@@ -1,16 +1,24 @@
-var fs = require('fs');
-var http = require('http');
-var dns = require('dns');
-var whois = require('whois');
-var WebSocketServer = require('websocket').server;
+'use strict';
+
+const fs = require('fs');
+const http = require('http');
+const dns = require('dns');
+const whois = require('whois');
+const logger = require('winston');
+const WebSocketServer = require('websocket').server;
 
 const punycode = require('punycode');
-var domaincheck = new RegExp("[^a-z0-9-.]","i");
-var config = require('./config');
+const domaincheck = new RegExp("[^a-z0-9-.]","i");
+const config = require('./config');
 
 var httpService = (config.ssl) ? require('https') : require('http');
 var server = null;
 var memcached = null;
+
+if (config.debug) {
+  logger.level = 'debug';
+}
+
 if (config.memcached) {
   var Memcached = require('memcached');
   memcached = new Memcached(config.memcached_server, {
@@ -32,13 +40,13 @@ if (config.ssl) {
     cert: fs.readFileSync(config.ssl_cert)
   }, processRequest).listen(process.env.PORT || 8080, process.env.IP || "0.0.0.0", function(){
     var addr = server.address();
-    console.log("Secure websocket server (wss) listening at", addr.address + ":" + addr.port);
+    logger.info("Secure websocket server (wss) listening at", addr.address + ":" + addr.port);
   });
 }
 else {
   server = httpService.createServer(processRequest).listen(process.env.PORT || 8080, process.env.IP || "0.0.0.0", function(){
     var addr = server.address();
-    console.log("Websocket server (ws) listening at", addr.address + ":" + addr.port);
+    logger.info("Websocket server (ws) listening at", addr.address + ":" + addr.port);
   });
 }
 
@@ -47,12 +55,28 @@ var wsServer = new WebSocketServer({
   autoAcceptConnections: false
 });
 
+function checkMemcache(domain) {
+  return new Promise((resolve, reject) => {
+    if (config.memcached) {
+      memcached.get(domain, (err, data) => {
+        if (err) reject();
+        logger.debug("Result from memcached for domain " + domain + ": " + data);
+        resolve(data);
+      })
+    }
+    else {
+      logger.debug("Memcache not configured, rejecting cache check.");
+      reject();
+    }
+  })
+}
+
 function originIsAllowed(origin) {
   for (var orig in config.allowed_origin) {
         if (config.debug) {
-            console.log("Checking " + origin + " against " + config.allowed_origin[orig]);
+            logger.debug("Checking " + origin + " against " + config.allowed_origin[orig]);
         }
-        if (origin == config.allowed_origin[orig]) {
+        if (origin === config.allowed_origin[orig]) {
             return true;
         }
   }
@@ -81,19 +105,17 @@ function whoisNotfound(whoisresult) {
 wsServer.on('request', function(request) {
     if (!originIsAllowed(request.origin)) {
       request.reject();
-      console.log((new Date()) + ' Connection from origin ' + request.origin + ' rejected.');
+      logger.info((new Date()) + ' Connection from origin ' + request.origin + ' rejected.');
       return;
     }
     
     var connection = request.accept('echo-protocol', request.origin);
-    console.log((new Date()) + ' Connection accepted.');
+    logger.info((new Date()) + ' Client ' + connection.remoteAddress + ' from ' + request.origin + ' accepted.');
+
     connection.on('message', function(domainname) {
       domainname = domainname.utf8Data;
-
-      if (config.debug) {
-        console.log("Whois request received for " + domainname);
-      }
-         
+      logger.debug("Whois request received for " + domainname);
+               
       var domain = punycode.toASCII(String(domainname || ''));
       if (!domain || domaincheck.test(domain) || domain.length < 3) {
         connection.sendUTF(domainname + ":INVALID");

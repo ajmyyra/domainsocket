@@ -8,7 +8,13 @@
   "dependencies": {
     "websocket": "~1.0.24",
     "whois": "~2.5.0",
-    "memcached": "~2.2.2"
+    "memcached": "~2.2.2",
+    "winston": "~2.3.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-es2017": "^6.24.1"
   },
   "license": "MIT"
 }
