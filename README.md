@@ -8,7 +8,7 @@ Lookup is first done using C-Ares, and only if no result is found (domain might 
 
 1) Clone the repository to your server and run 'npm install' in the directory.
 
-2) Create a config.js file that has allowed origin, memcached and SSL information. Debug mode is a lot more verbose, causing too much logging in production.
+2) Create a config.js file that has allowed origin, memcached and SSL information. Debug mode is a lot more verbose, causing too much logging in production. Config variables serverip and serverport can be left blank and defaults will then be used (0.0.0.0:8080).
 
 With SSL and memcached, but without debug (standard production config):
 ```
@@ -23,10 +23,12 @@ module.exports = {
 }
 ```
 
-Without SSL and memcached, but with debug on:
+Without SSL and memcached, but with debug on (common development setup):
 ```
 module.exports = {
-    'allowed_origin': 'https://your-web-page.com',
+    'serverip': '127.0.0.1',
+    'serverport': '8000',
+    'allowed_origin': [ 'http://localhost:8000' ],
     'memcached': false,
     'ssl': false,
     'debug': true
