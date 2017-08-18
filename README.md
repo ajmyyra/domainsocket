@@ -2,7 +2,9 @@
 
 Simple websocket server to make domain lookups. Punycode domains (domains with äöü, asian characters etc) are also supported.
 
-Lookup is first done using C-Ares, and only if no result is found (domain might be available), a more expensive whois request is made to find out the truth.
+Lookup is first done using C-Ares DNS library, and only if no result is found (domain might be available), a more expensive whois request is made to find out the truth.
+
+Results can be saved into Memcached, so they don't need to be constantly re-fetched.
 
 ## Running the server
 
@@ -35,7 +37,7 @@ module.exports = {
 }
 ```
 
-3) Run server.js under your favorite daemon (m2, forever, plain /usr/bin/node, whatever works for you best)
+3) Run server.js under your favorite daemon (m2, forever, systemd service plain /usr/bin/node, whatever works for you best)
 
-4) Create a websocket from your website using W3C sockets ( ws = new WebSocket('wss://your-websocket-server-address:8080/', 'echo-protocol'); ) and start using the service. More info at http://codular.com/node-web-sockets .
+4) Create a websocket from your website using W3C sockets and echo-protocol ( ws = new WebSocket('wss://your-websocket-server-address:8080/', 'echo-protocol'); ) and start using the service. More info at http://codular.com/node-web-sockets for an easy client setup.
 
