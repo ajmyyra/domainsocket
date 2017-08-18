@@ -175,98 +175,99 @@ function whoisNotfound(whoisdata) {
 }
  
 wsServer.on('request', function(request) {
-    if (!originIsAllowed(request.origin)) {
-      request.reject();
-      logger.info('Connection from origin', request.origin, 'rejected.');
+  
+  if (!originIsAllowed(request.origin)) {
+    request.reject();
+    logger.info('Client', request.remoteAddress, 'from', request.origin, 'rejected.');
+    return;
+  }
+    
+  var connection = request.accept('echo-protocol', request.origin);
+  logger.info('Client', connection.remoteAddress, 'from', request.origin, 'connected.');
+
+  connection.on('message', function(domainname) {
+    domainname = domainname.utf8Data;
+    var status;
+    logger.debug('Whois request received for', domainname);
+          
+    var domain = punycode.toASCII(String(domainname || ''));
+    if (!domain || domaincheck.test(domain) || domain.length < 3) {
+      connection.sendUTF(domainname + ":INVALID");
       return;
     }
-    
-    var connection = request.accept('echo-protocol', request.origin);
-    logger.info('Client', connection.remoteAddress, 'from', request.origin, 'accepted.');
 
-    connection.on('message', function(domainname) {
-      domainname = domainname.utf8Data;
-      logger.debug('Whois request received for', domainname);
-               
-      var domain = punycode.toASCII(String(domainname || ''));
-      if (!domain || domaincheck.test(domain) || domain.length < 3) {
-        connection.sendUTF(domainname + ":INVALID");
+    anyways(checkMemcache(domainname)).then((result, error) => {
+      if (result && result.value != undefined) {
+        status = result.value;
+        logger.info(connection.remoteAddress, 'DOMAINSTATUS', domainname + ':', status, '(from Memcached)');
+        connection.sendUTF(domainname + ':' + status);
         return;
       }
-
-      anyways(checkMemcache(domainname)).then((result, error) => {
-        if (result && result.value != undefined) {
-          logger.info('Status for', domainname, 'to', connection.remoteAddress, 'from memcache:', result.value);
-          connection.sendUTF(domainname + ':' + result.value);
-          return;
-        }
         
-        checkDNS(domainname).then((dnsresult) => {
-          logger.info('Status for', domainname, 'to', connection.remoteAddress, 'from DNS request: UNAVAILABLE');
+      checkDNS(domainname).then((dnsresult) => {
+        status = 'UNAVAILABLE';
+        logger.info(connection.remoteAddress, 'DOMAINSTATUS', domainname + ':', status, '(from DNS)');
+        if (config.memcached) {
+          addToMemcache(domainname, status).catch((err) => {
+            logger.error('Error when saving result for', domainname + ':', err);
+          })
+        }
+        connection.sendUTF(domainname + ':' + status);
+        return;
+      }).catch((err) => {
+        
+        // checking for known statuses that indicate a domain is taken
+        if (err.message.includes('EBADNAME')) {
+          status = 'INVALID';
+          logger.debug('Domain', domainname, 'is invalid per DNS query.');
+        }
+        if (err.message.includes("ESERVFAIL")) {
+          logger.debug('Domain', domainname, 'is unavailable per DNS query (but is not working).');
+          status = 'UNAVAILABLE';
+        }
+              
+        if (status != undefined) {
+          logger.info(connection.remoteAddress, 'DOMAINSTATUS', domainname + ':', status, '(from DNS)');
+          connection.sendUTF(domainname + ':' + status);
           if (config.memcached) {
-            addToMemcache(domainname, 'UNAVAILABLE').catch((err) => {
+            addToMemcache(domainname, status).catch((err) => {
               logger.error('Error when saving result for', domainname + ':', err);
             })
           }
-          connection.sendUTF(domainname + ':UNAVAILABLE');
           return;
-        }).catch((err) => {
-          
-          // checking for known statuses that indicate a domain is taken
-          var status;
-          if (err.message.match('EBADNAME')) {
-            status = 'INVALID';
-            logger.info('Domain', domainname, 'is invalid per DNS query.');
-          }
-          if (err.message.match("SERVFAIL")) {
-            logger.info('Domain', domainname, 'is unavailable per DNS query (but is not working).');
-            status = 'UNAVAILABLE';
-          }
-          if (!err.message.match("ENOTFOUND") && !err.message.match("ENODATA")) {
-            logger.error('DNS query error was encountered for', domainname + ':', err);
+        }
+
+        anyways(checkWhois(domainname)).then((whoisresult, error) => {
+          if (error) {
+            logger.error('Whois query error was encountered for', domainname + ':', err);
             status = 'SERVFAIL';
           }
-      
-          if (status != undefined) {
-            connection.sendUTF(domainname + ':' + status);
-            if (config.memcached) {
-              addToMemcache(domainname, status).catch((err) => {
-                logger.error('Error when saving result for', domainname + ':', err);
-              })
-            }
-            return;
-          }
-
-          anyways(checkWhois(domainname)).then((whoisresult, error) => {
-            if (error) {
-              logger.error('Whois query error was encountered for', domainname + ':', err);
-              status = 'SERVFAIL';
+          else {
+            if (whoisNotfound(whoisresult)) {
+              logger.debug('Domain', domainname, 'is available per whois request.');
+              status = 'AVAILABLE';
             }
             else {
-              if (whoisNotfound(whoisresult)) {
-                logger.info('Domain', domainname, 'is available per whois request.');
-                status = 'AVAILABLE';
-              }
-              else {
-                logger.info('Domain', domainname, 'is not available per whois request.');
-                status = 'UNAVAILABLE';
-              }
+              logger.debug('Domain', domainname, 'is not available per whois request.');
+              status = 'UNAVAILABLE';
             }
+          }
 
-            connection.sendUTF(domainname + ':' + status);
-            if (config.memcached) {
-              addToMemcache(domainname, status).catch((err) => {
-                logger.error('Error when saving result for', domainname + ':', err);
-              })
-            }
-            return;
-          })
-
+          logger.info(connection.remoteAddress, 'DOMAINSTATUS', domainname + ':', status, '(from WHOIS)');
+          connection.sendUTF(domainname + ':' + status);
+          if (config.memcached) {
+            addToMemcache(domainname, status).catch((err) => {
+              logger.error('Error when saving result for', domainname + ':', err);
+            })
+          }
+          return;
         })
-      })
-    });
 
-    connection.on('close', function(reasonCode, description) {
-        console.log((new Date()) + ' Client ' + connection.remoteAddress + ' disconnected.');
-    });
+      })
+    })
+  });
+
+  connection.on('close', function(reasonCode, description) {
+    logger.info('Client', connection.remoteAddress, 'disconnected.');
+  });
 });
