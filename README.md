@@ -37,7 +37,7 @@ module.exports = {
 }
 ```
 
-3) Run server.js under your favorite daemon (m2, forever, systemd service plain /usr/bin/node, whatever works for you best)
+3) Run server.js under your favorite daemon (m2, forever, systemd service or just plain /usr/bin/node, whatever works for you best)
 
 4) Create a websocket from your website using W3C sockets and echo-protocol ( ws = new WebSocket('wss://your-websocket-server-address:8080/', 'echo-protocol'); ) and start using the service. More info at http://codular.com/node-web-sockets for an easy client setup.
 
